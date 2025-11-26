@@ -2,38 +2,34 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Examen3.Data;
 
-var url = Environment.GetEnvironmentVariable("DATABASE");
-Console.WriteLine($"La conexión a la DB es: {url}");
-
 var builder = WebApplication.CreateBuilder(args);
 
-// DbContext usando variable de entorno
+// DbContext (opcional, solo si vas a usarlo)
+// No se aplica migraciones automáticas para que no rompa en Railway si no hay DB
 builder.Services.AddDbContext<Examen3Context>(options =>
 {
-    if (!string.IsNullOrEmpty(url))
+    var dbUrl = Environment.GetEnvironmentVariable("DATABASE")
+                ?? builder.Configuration.GetConnectionString("Examen3Context");
+
+    if (!string.IsNullOrEmpty(dbUrl))
     {
-        options.UseNpgsql(url);
-    }
-    else
-    {
-        // Fallback local
-        options.UseNpgsql(builder.Configuration.GetConnectionString("Examen3Context")
-            ?? throw new InvalidOperationException("Connection string 'Examen3Context' not found."));
+        options.UseNpgsql(dbUrl);
     }
 });
 
-// Exponer puerto 8080 para contenedores
-builder.WebHost.UseUrls("http://0.0.0.0:8080");
+// Puerto dinámico que asigna Railway
+var port = Environment.GetEnvironmentVariable("PORT") ?? "8080";
+builder.WebHost.UseUrls($"http://0.0.0.0:{port}");
 
 // CORS
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("Examen3",
-        builder =>
+        policy =>
         {
-            builder.AllowAnyOrigin()
-                   .AllowAnyMethod()
-                   .AllowAnyHeader();
+            policy.AllowAnyOrigin()
+                  .AllowAnyMethod()
+                  .AllowAnyHeader();
         });
 });
 
@@ -50,13 +46,6 @@ builder.Services.AddHttpClient("Api1", c =>
 });
 
 var app = builder.Build();
-
-// Aplicar migraciones automáticamente
-using (var scope = app.Services.CreateScope())
-{
-    var db = scope.ServiceProvider.GetRequiredService<Examen3Context>();
-    db.Database.Migrate();
-}
 
 // Pipeline
 if (app.Environment.IsDevelopment())
