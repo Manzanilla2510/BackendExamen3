@@ -4,16 +4,16 @@ ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
 
 # Copiamos solo el csproj primero para que el cache funcione
-COPY ["Examen3/Examen3.csproj", "Examen3/"]
+COPY ["Examen3.csproj", ". /"]
 
 # Restore
-RUN dotnet restore "Examen3/Examen3.csproj"
+RUN dotnet restore "	Examen3.csproj"
 
 # Copiamos todo el código
 COPY . .
 
 # Compilamos
-WORKDIR "/src/Examen3"
+
 RUN dotnet build "Examen3.csproj" -c $BUILD_CONFIGURATION -o /app/build
 
 # ================= PUBLISH =================
